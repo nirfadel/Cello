@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: TaskManagement/Dockerfile
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__conn=DESKTOP-SPC7OGC;Initial Catalog=TaskManageDB; Integrated Security=true;TrustServerCertificate=True
+      - AWS__Cognito__Region=${AWS_REGION}
+      - AWS__Cognito__UserPoolId=${AWS_USER_POOL_ID}
+      - AWS__Cognito__AppClientId=${AWS_APP_CLIENT_ID}
+      - AWS__Cognito__AppClientSecret=${AWS_APP_CLIENT_SECRET}
+    depends_on:
+      - db
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrongPassword123!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    restart: always
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "YourStrongPassword123!" -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  sqldata:

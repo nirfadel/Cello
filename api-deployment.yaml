@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskmgmt-api
+  labels:
+    app: taskmgmt-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: taskmgmt-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: taskmgmt-api
+    spec:
+      containers:
+      - name: api
+        image: ${DOCKER_REGISTRY}/taskmgmt-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ConnectionStrings__conn
+          valueFrom:
+            secretKeyRef:
+              name: taskmgmt-secrets
+              key: db-connection-string
+        - name: AWS__Cognito__Region
+          valueFrom:
+            secretKeyRef:
+              name: taskmgmt-secrets
+              key: aws-region
+        - name: AWS__Cognito__UserPoolId
+          valueFrom:
+            secretKeyRef:
+              name: taskmgmt-secrets
+              key: aws-user-pool-id
+        - name: AWS__Cognito__AppClientId
+          valueFrom:
+            secretKeyRef:
+              name: taskmgmt-secrets
+              key: aws-app-client-id
+        - name: AWS__Cognito__AppClientSecret
+          valueFrom:
+            secretKeyRef:
+              name: taskmgmt-secrets
+              key: aws-app-client-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
